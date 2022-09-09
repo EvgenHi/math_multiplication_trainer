@@ -1,6 +1,9 @@
-use eframe::egui::{self, FontData, FontDefinitions};
+#![windows_subsystem = "windows"]
+
+use eframe::egui::{self, FontData, FontDefinitions, output::OpenUrl};
 use egui::epaint::FontFamily;
 use rand::Rng;
+use soloud::*;
 
 fn main() {
     let native_options = eframe::NativeOptions {
@@ -29,19 +32,36 @@ struct MultiplicationTraining {
     first_num: u8,
     second_num: u8,
     user_input: String,
-    is_right: String,
-    check: bool,
+    combo: u64,
+    max_combo: u64,
+    try_count: u64,
+    average_time: f64,
+    sl: Soloud,
+    score_sound: Wav,
+    ouch_sound: Wav,
 }
 
 impl Default for MultiplicationTraining {
     fn default() -> Self {
+        
+        let sl = Soloud::default().unwrap();
+        let mut score_sound = audio::Wav::default();
+        score_sound.load_mem(include_bytes!("resources/score_point.wav")).unwrap();
+        let mut ouch_sound = audio::Wav::default();
+        ouch_sound.load_mem(include_bytes!("resources/ouch.wav")).unwrap();
         MultiplicationTraining {
             first_num: rand::thread_rng().gen_range(2..=9),
             second_num: rand::thread_rng().gen_range(2..=9),
             user_input: format!(""),
-            is_right: format!(""),
-            check: false,
+            combo: 0,
+            max_combo: 0,
+            try_count: 1,
+            average_time: 0f64,
+            sl: sl,
+            score_sound: score_sound,
+            ouch_sound: ouch_sound,
         }
+
     }
 }
 
@@ -54,7 +74,7 @@ impl MultiplicationTraining {
         let mut fonts = FontDefinitions::default();
         fonts.font_data.insert(
             "sunday".to_owned(),
-            FontData::from_static(include_bytes!("Undertale-Battle-Font.ttf")),
+            FontData::from_static(include_bytes!("resources/Undertale-Battle-Font.ttf")),
         );
         fonts
             .families
@@ -78,32 +98,88 @@ impl eframe::App for MultiplicationTraining {
             ui.vertical_centered_justified(|ui| {
                 ui.heading("Тренировка таблицы умножения");
                 ui.separator();
-                ui.vertical_centered(|ui| {
-                    ui.label(format!(
-                        "Сколько будет {} * {}?",
-                        self.first_num, self.second_num
-                    ));
-                    ui.checkbox(&mut self.check, "Checkbox");
-                    if ui.text_edit_singleline(&mut self.user_input).lost_focus() {
-                        let user_answer: u8 = match self.user_input.trim().parse() {
-                            Ok(num) => num,
-                            Err(_) => 3,
-                        };
-                        if user_answer == self.second_num * self.first_num {
-                            self.is_right = "Верно!".to_string();
-                            self.first_num = rand::thread_rng().gen_range(2..=9);
-                            self.second_num = rand::thread_rng().gen_range(2..=9);
-                        } else {
-                            self.is_right = "Неверно!".to_string();
-                            
+            });
+
+            //ui.add_space(75f32);
+            
+
+            // ui.label("Cколько будет ");
+            // ui.strong(self.first_num.to_string());
+            // ui.label("*");
+            // ui.strong(self.second_num.to_string());
+
+            // if ui.button("📋").clicked() {
+            //     ui.output().open_url= Some(OpenUrl {
+            //         new_tab: true,
+            //         url: "https://youtu.be/dQw4w9WgXcQ".to_string(),
+            //     });
+            // }
+
+            ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                ui.add_space(240f32);
+                ui.strong(self.first_num.to_string());
+                ui.label("*");
+                ui.strong(self.second_num.to_string());
+                ui.label("=");
+                let text_edit = egui::TextEdit::singleline(&mut self.user_input);
+                let response = text_edit.desired_width(13.3f32);
+                ui.add(response);
+                let user_answer: u8 = match self.user_input.trim().parse() {
+                    Ok(num) => num,
+                    Err(_) => 3,
+                };
+
+                if length(self.first_num * self.second_num, 10)
+                    == self.user_input.chars().count() as u8
+                {
+                    if user_answer == self.second_num * self.first_num {
+                        self.sl.play(&self.score_sound);
+                        self.first_num = rand::thread_rng().gen_range(2..=9);
+                        self.second_num = rand::thread_rng().gen_range(2..=9);
+                        self.combo += 1;
+                        self.user_input = "".to_string();
+                        if self.max_combo < self.combo {
+                            self.max_combo = self.combo;
                         }
-                    };
-                });
+                    } else {
+                        self.try_count += 1;
+                        if self.max_combo < self.combo {
+                            self.max_combo = self.combo;
+                        }
+                        self.sl.play(&self.ouch_sound);
+                        self.combo = 0;
+                        self.user_input = "".to_string();
+                    }
+                    if self.combo == 10 {
+                         ui.output().open_url= Some(OpenUrl {
+                             new_tab: true,
+                             url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ".to_string(),
+                         });
+                    }
+                }
+            });
+
+            ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
                 
-                ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
-                    ui.label("Count!");
-                });
+                ui.label(format!("Максимальный счёт: {}", self.max_combo));
+                ui.label("Ср. время!");
+                ui.label(format!("Счёт: {}", self.combo));                
+                ui.label(format!("Попытка № {}", self.try_count));
             });
         });
     }
+}
+
+fn length(n: u8, base: u8) -> u8 {
+    let mut power = base;
+    let mut count = 1;
+    while n >= power {
+        count += 1;
+        if let Some(new_power) = power.checked_mul(base) {
+            power = new_power;
+        } else {
+            break;
+        }
+    }
+    count
 }
