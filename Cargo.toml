@@ -7,9 +7,5 @@ edition = "2021"
 
 [dependencies]
 eframe = "*"
-<<<<<<< HEAD
 rand = "*"
-=======
-rand = "*" 
->>>>>>> d6bfcdb (Added sound when multiplication is true and false.)
 soloud = "*"
