@@ -57,9 +57,9 @@ impl Default for MultiplicationTraining {
             max_combo: 0,
             try_count: 1,
             average_time: 0f64,
-            sl: sl,
-            score_sound: score_sound,
-            ouch_sound: ouch_sound,
+            sl,
+            score_sound,
+            ouch_sound,
         }
 
     }
@@ -73,19 +73,19 @@ impl MultiplicationTraining {
         // for e.g. egui::PaintCallback.
         let mut fonts = FontDefinitions::default();
         fonts.font_data.insert(
-            "sunday".to_owned(),
+            "Undertale".to_owned(),
             FontData::from_static(include_bytes!("resources/Undertale-Battle-Font.ttf")),
         );
         fonts
             .families
             .get_mut(&FontFamily::Proportional)
             .unwrap()
-            .insert(0, "sunday".to_owned());
+            .insert(0, "Undertale".to_owned());
         fonts
             .families
             .get_mut(&FontFamily::Monospace)
             .unwrap()
-            .push("sunday".to_owned());
+            .push("Undertale".to_owned());
         cc.egui_ctx.set_fonts(fonts);
         cc.egui_ctx.set_pixels_per_point(1.6); //2.21234 //1.632
         Self::default()
@@ -129,8 +129,8 @@ impl eframe::App for MultiplicationTraining {
                     Err(_) => 3,
                 };
 
-                if length(self.first_num * self.second_num, 10)
-                    == self.user_input.chars().count() as u8
+                if  self.user_input.chars().count() as u8
+                    >= length(self.first_num * self.second_num, 10)
                 {
                     if user_answer == self.second_num * self.first_num {
                         self.sl.play(&self.score_sound);
@@ -159,7 +159,7 @@ impl eframe::App for MultiplicationTraining {
                 }
             });
 
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
+            ui.with_layout(egui::Layout::bottom_up(egui::Align::Max), |ui| {
                 
                 ui.label(format!("Максимальный счёт: {}", self.max_combo));
                 ui.label("Ср. время!");
