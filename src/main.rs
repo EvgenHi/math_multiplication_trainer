@@ -193,7 +193,7 @@ impl eframe::App for MultiplicationTraining {
                                         self.combo = 0;
                                         self.try_count += 1;
                                         self.sl.play(&self.ouch_sound);
-                                        self.average_time.reset_count();
+                                        self.average_time = AverageTime::new();
                                     }
                                     if self.combo == 20 {
                                         ui.output().open_url = Some(egui::output::OpenUrl {

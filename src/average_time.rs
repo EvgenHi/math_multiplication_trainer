@@ -25,9 +25,6 @@ impl AverageTime {
             time: Instant::now(),
         }
     }
-    pub fn reset_count(&mut self) {
-        self.count = 0f64;
-    }
 }
 
 trait Trunc {
