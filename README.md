@@ -4,6 +4,8 @@ This application is created as my school project.
 
 Application now in pre-release
 
+![Screenshot from 2022-10-02 19-17-54](https://user-images.githubusercontent.com/91457298/193475244-cdbf01ad-d8f7-42cc-9693-ebc2970054e7.png)
+
 <br>
 
 ## Installation
