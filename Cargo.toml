@@ -7,12 +7,7 @@ readme = "README.md"
 repository = "https://github.com/EvgenHi/math_multiplication_trainer"
 license = "MIT"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 eframe = "0.19.*"
 rand = "0.8.*"
 soloud = "1.*.*"
-
-[target.'cfg(windows)'.build-dependencies]
-winres = "0.1"
