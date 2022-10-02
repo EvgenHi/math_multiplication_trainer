@@ -1,18 +1,23 @@
 #![windows_subsystem = "windows"]
 
+mod theme;
+mod average_time;
+use theme::CustomTheme;
+use average_time::AverageTime;
+
 use eframe::{
-    egui::{self, FontData, FontDefinitions, Key, Label},
-    epaint::vec2, IconData,
+    egui::{self, style::Margin, FontData, FontDefinitions, Key, Label},
+    epaint::vec2,
+    IconData,
 };
 use egui::epaint::FontFamily;
 use rand::Rng;
-use soloud::*;
+use soloud::{AudioExt, LoadExt, Soloud, Wav};
 
 fn main() {
-
     let native_options = eframe::NativeOptions {
         min_window_size: Some(egui::vec2(715.0, 300.0)),
-        max_window_size: None, //Some(egui::vec2(1000.0, 600.0)),
+        max_window_size: None,
         initial_window_pos: Some(egui::pos2(548f32, 215f32)),
         initial_window_size: Some(egui::vec2(900 as f32, 600 as f32)),
         always_on_top: false,
@@ -23,7 +28,6 @@ fn main() {
             rgba: include_bytes!("resources/icon.rgba").to_vec(),
             width: 32,
             height: 32,
-
         }),
         resizable: true,
         transparent: true,
@@ -45,23 +49,23 @@ struct MultiplicationTraining {
     combo: u64,
     max_combo: u64,
     try_count: u64,
-    average_time: f64,
+    average_time: AverageTime,
     sl: Soloud,
     score_sound: Wav,
     ouch_sound: Wav,
     volume: f32,
+    theme: CustomTheme,
 }
 
 impl Default for MultiplicationTraining {
     fn default() -> Self {
-
         // Load sounds
         let mut sl = Soloud::default().unwrap();
-        let mut score_sound = audio::Wav::default();
+        let mut score_sound = soloud::audio::Wav::default();
         score_sound
             .load_mem(include_bytes!("resources/score_point.wav"))
             .unwrap();
-        let mut ouch_sound = audio::Wav::default();
+        let mut ouch_sound = soloud::audio::Wav::default();
         ouch_sound
             .load_mem(include_bytes!("resources/ouch.wav"))
             .unwrap();
@@ -75,11 +79,12 @@ impl Default for MultiplicationTraining {
             combo: 0,
             max_combo: 0,
             try_count: 1,
-            average_time: 0f64,
+            average_time: AverageTime::new(),
             sl,
             score_sound,
             ouch_sound,
             volume: 40f32,
+            theme: CustomTheme::Dark,
         }
     }
 }
@@ -124,20 +129,23 @@ impl eframe::App for MultiplicationTraining {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         ctx.set_pixels_per_point(1.5f32);
 
-        // Next update will contain colored themes
-        /*
-        let my_frame = egui::containers::Frame {
+        let central_panel_frame = egui::containers::Frame {
             inner_margin: Margin::symmetric(10f32, 10f32),
-            rounding: egui::Rounding { nw: 1.0, ne: 1.0, sw: 1.0, se: 1.0 },
-            shadow: eframe::epaint::Shadow { extrusion: 1.0, color: Color32::YELLOW },
-            fill: Color32::DARK_RED,
-            //stroke: egui::Stroke::new(2.0, Color32::GOLD),
+            outer_margin: Margin::symmetric(10f32, 10f32),
+            rounding: egui::Rounding {
+                nw: 10.0,
+                ne: 10.0,
+                sw: 10.0,
+                se: 10.0,
+            },
+            fill: self.theme.bg_color(),
             ..Default::default()
         };
-        */
 
         egui::CentralPanel::default()
+            .frame(central_panel_frame)
             .show(ctx, |ui| {
+                ui.style_mut().visuals.override_text_color = Some(self.theme.text_color());
 
                 //Top heading
                 ui.vertical_centered_justified(|ui| {
@@ -150,7 +158,6 @@ impl eframe::App for MultiplicationTraining {
                     vec2(ui.available_width(), ui.available_height() - 30f32),
                     egui::Layout::left_to_right(egui::Align::Center),
                     |ui| {
-                        
                         ui.add_space(ui.available_width() / 2f32 - 27f32);
                         ui.strong(self.first_num.to_string());
                         ui.label("*");
@@ -160,7 +167,7 @@ impl eframe::App for MultiplicationTraining {
                             egui::TextEdit::singleline(&mut self.user_input).desired_width(14.6f32),
                         )
                         .request_focus();
-                        
+
                         //Logic of the application
                         self.user_input = self.user_input.chars().take(2).collect::<String>();
                         match self.user_input.trim().parse::<u64>() {
@@ -177,6 +184,7 @@ impl eframe::App for MultiplicationTraining {
                                         self.first_num = rand::thread_rng().gen_range(2..=9);
                                         self.second_num = rand::thread_rng().gen_range(2..=9);
                                         self.sl.play(&self.score_sound);
+                                        self.average_time.count_again();
                                     } else {
                                         self.user_input = "".to_string();
                                         if self.max_combo < self.combo {
@@ -185,6 +193,7 @@ impl eframe::App for MultiplicationTraining {
                                         self.combo = 0;
                                         self.try_count += 1;
                                         self.sl.play(&self.ouch_sound);
+                                        self.average_time.reset_count();
                                     }
                                     if self.combo == 20 {
                                         ui.output().open_url = Some(egui::output::OpenUrl {
@@ -207,7 +216,6 @@ impl eframe::App for MultiplicationTraining {
                             .enabled(true);
                             window = window.anchor(egui::Align2::RIGHT_CENTER, vec2(0f32, 0f32));
                         window.show(ctx, |ui| ui.label("a"));*/
-
                     },
                 );
 
@@ -215,25 +223,27 @@ impl eframe::App for MultiplicationTraining {
                 ui.group(|ui| {
                     ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
                         ui.horizontal(|ui| {
-                            
-                            let max_combo = Label::new(format!("Максимальный счёт: {}", self.max_combo));
-                            ui.add_sized([165f32,14f32], max_combo);
+                            let max_combo =
+                                Label::new(format!("Максимальный счёт: {}", self.max_combo));
+                            ui.add_sized([165f32, 14f32], max_combo);
 
                             ui.add_space(ui.available_width() / 3f32 - 95f32);
-                            
-                            let sr_vremya = Label::new(format!("Ср. время: {}", self.average_time));
-                            ui.add_sized([95f32,14f32], sr_vremya);
-                            
-                            ui.add_space(ui.available_width() / 2f32 - 85f32);
-                            
-                            let schyot = Label::new(format!("Счёт: {}", self.combo));
-                            ui.add_sized([60f32,14f32], schyot);
 
-                            ui.add_space(ui.available_width() - 110f32);                            
+                            let sr_vremya = Label::new(format!(
+                                "Ср. время: {}",
+                                self.average_time.get_overall_time()
+                            ));
+                            ui.add_sized([95f32, 14f32], sr_vremya);
+
+                            ui.add_space(ui.available_width() / 2f32 - 85f32);
+
+                            let schyot = Label::new(format!("Счёт: {}", self.combo));
+                            ui.add_sized([60f32, 14f32], schyot);
+
+                            ui.add_space(ui.available_width() - 110f32);
 
                             let popitka = Label::new(format!("Попытка № {}", self.try_count));
-                            ui.add_sized([110f32,14f32], popitka);
-                            
+                            ui.add_sized([110f32, 14f32], popitka);
                         });
                     });
                 });
@@ -241,7 +251,27 @@ impl eframe::App for MultiplicationTraining {
             .response
             .context_menu(|ui| {
                 ui.menu_button("Тема", |ui| {
-                    egui::global_dark_light_mode_buttons(ui);
+                    if ui.button("Тёмная").clicked() {
+                        self.theme = CustomTheme::Dark
+                    }
+                    if ui.button("Светлая").clicked() {
+                        self.theme = CustomTheme::Light
+                    }
+                    if ui.button("Красная").clicked() {
+                        self.theme = CustomTheme::Red
+                    }
+                    if ui.button("Зелёная").clicked() {
+                        self.theme = CustomTheme::Green
+                    }
+                    if ui.button("Голубая").clicked() {
+                        self.theme = CustomTheme::Blue
+                    }
+                    if ui.button("Прозрачная").clicked() {
+                        self.theme = CustomTheme::Transparent
+                    }
+                    if ui.button("WindowsXP").clicked() {
+                        self.theme = CustomTheme::WindowsXP
+                    }
                 });
                 ui.menu_button("Громкость", |ui| {
                     ui.add(egui::Slider::new(&mut self.volume, 0.0..=100.0));
@@ -253,8 +283,6 @@ impl eframe::App for MultiplicationTraining {
                         ui.hyperlink_to("EvgenHi", "https://github.com/EvgenHi");
                     });
                 });
-                
-                
             });
     }
 }
