@@ -18,9 +18,15 @@ Application now in pre-release
 
 <br>
 
-## Viewing project
+## Compiling native and viewing the project
 
 *Doing this you will get bleeding edge project (In active development).
+
+First make sure you have installed these dependencies:
+
+``
+sudo apt-get install -y libclang-dev libgtk-3-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev libxkbcommon-dev libssl-dev
+``
 
 <br>
 
