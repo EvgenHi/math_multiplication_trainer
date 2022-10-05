@@ -1,13 +1,13 @@
 #![windows_subsystem = "windows"]
 
-mod theme;
 mod average_time;
-use theme::CustomTheme;
+mod theme;
 use average_time::AverageTime;
+use theme::CustomTheme;
 
 use eframe::{
     egui::{self, style::Margin, FontData, FontDefinitions, Key, Label},
-    epaint::vec2,
+    epaint::{vec2, Color32, FontId},
     IconData,
 };
 use egui::epaint::FontFamily;
@@ -20,10 +20,6 @@ fn main() {
         max_window_size: None,
         initial_window_pos: Some(egui::pos2(548f32, 215f32)),
         initial_window_size: Some(egui::vec2(900 as f32, 600 as f32)),
-        always_on_top: false,
-        maximized: false,
-        decorated: true,
-        drag_and_drop_support: true,
         icon_data: Some(IconData {
             rgba: include_bytes!("resources/icon.rgba").to_vec(),
             width: 32,
@@ -55,6 +51,9 @@ struct MultiplicationTraining {
     ouch_sound: Wav,
     volume: f32,
     theme: CustomTheme,
+    game_mode: GameMode,
+    neverno_in_row: u64,
+    stroke_color: Color32,
 }
 
 impl Default for MultiplicationTraining {
@@ -70,7 +69,7 @@ impl Default for MultiplicationTraining {
             .load_mem(include_bytes!("resources/ouch.wav"))
             .unwrap();
 
-        sl.set_global_volume(0.32f32);
+        sl.set_global_volume(0.4f32);
 
         MultiplicationTraining {
             first_num: rand::thread_rng().gen_range(2..=9),
@@ -85,6 +84,9 @@ impl Default for MultiplicationTraining {
             ouch_sound,
             volume: 40f32,
             theme: CustomTheme::Dark,
+            game_mode: GameMode::Arcade,
+            neverno_in_row: 0,
+            stroke_color: CustomTheme::Dark.stroke_standart(),
         }
     }
 }
@@ -121,6 +123,21 @@ impl MultiplicationTraining {
         //Initial `pixels_per_point`
         cc.egui_ctx.set_pixels_per_point(1.5f32);
 
+        use egui::FontFamily::Proportional;
+        use egui::TextStyle::*;
+        let mut style = (*cc.egui_ctx.style()).clone();
+
+        style.text_styles = [
+            (Heading, FontId::new(25.0, Proportional)),
+            (Body, FontId::new(14.0, Proportional)),
+            (Monospace, FontId::new(14.0, Proportional)),
+            (Button, FontId::new(14.0, Proportional)),
+            (Small, FontId::new(10.0, Proportional)),
+        ]
+        .into();
+
+        cc.egui_ctx.set_style(style);
+
         Self::default()
     }
 }
@@ -147,6 +164,13 @@ impl eframe::App for MultiplicationTraining {
             .show(ctx, |ui| {
                 ui.style_mut().visuals.override_text_color = Some(self.theme.text_color());
 
+                // sets stroke color
+                if self.average_time.return_to_standart_stroke() {
+                    self.stroke_color = self.theme.stroke_standart();
+                }
+                ui.visuals_mut().selection.stroke.color = self.stroke_color;
+                ui.visuals_mut().selection.stroke.width = 1.13f32;
+
                 //Top heading
                 ui.vertical_centered_justified(|ui| {
                     ui.heading("Тренировка таблицы умножения");
@@ -155,18 +179,46 @@ impl eframe::App for MultiplicationTraining {
 
                 //Main body
                 ui.allocate_ui_with_layout(
-                    vec2(ui.available_width(), ui.available_height() - 30f32),
+                    vec2(
+                        ui.available_width(),
+                        ui.available_height()
+                            - if self.game_mode == GameMode::Arcade {
+                                30f32
+                            } else {
+                                0f32
+                            },
+                    ),
                     egui::Layout::left_to_right(egui::Align::Center),
                     |ui| {
-                        ui.add_space(ui.available_width() / 2f32 - 27f32);
+                        ui.style_mut().override_font_id = Some(FontId {
+                            size: 20f32,
+                            family: FontFamily::Proportional,
+                        });
+                        ui.add_space(ui.available_width() / 2f32 - 45f32); //27
                         ui.strong(self.first_num.to_string());
                         ui.label("*");
                         ui.strong(self.second_num.to_string());
                         ui.label("=");
-                        ui.add(
-                            egui::TextEdit::singleline(&mut self.user_input).desired_width(14.6f32),
-                        )
-                        .request_focus();
+                        let mut layouter = |ui: &egui::Ui, string: &str, _wrap_width: f32| {
+                            let mut layout_job: egui::text::LayoutJob =
+                                egui::text::LayoutJob::simple_singleline(
+                                    string.to_string(),
+                                    FontId {
+                                        size: 20f32,
+                                        family: FontFamily::Proportional,
+                                    },
+                                    self.theme.text_color(),
+                                );
+                            layout_job.text = string.to_string();
+                            ui.fonts().layout_job(layout_job)
+                        };
+                        let text_edit = egui::TextEdit::singleline(&mut self.user_input)
+                            .desired_width(21f32) // 30
+                            .layouter(&mut layouter);
+                        ui.add(text_edit).request_focus();
+                        if self.game_mode == GameMode::Training && self.neverno_in_row > 2 {
+                            ui.weak(format!("// {}", self.first_num * self.second_num));
+                        }
 
                         //Logic of the application
                         self.user_input = self.user_input.chars().take(2).collect::<String>();
@@ -175,24 +227,34 @@ impl eframe::App for MultiplicationTraining {
                                 if ctx.input().key_pressed(Key::Enter) {
                                     if user_answer == self.second_num * self.first_num {
                                         self.user_input = "".to_string();
-                                        // First add
-                                        self.combo += 1;
-                                        // Then check
-                                        if self.max_combo < self.combo {
-                                            self.max_combo = self.combo;
+                                        if self.game_mode == GameMode::Arcade {
+                                            // First add
+                                            self.combo += 1;
+                                            // Then check
+                                            if self.max_combo < self.combo {
+                                                self.max_combo = self.combo;
+                                            }
+                                        } else {
+                                            self.neverno_in_row = 0;
                                         }
                                         self.first_num = rand::thread_rng().gen_range(2..=9);
                                         self.second_num = rand::thread_rng().gen_range(2..=9);
                                         self.sl.play(&self.score_sound);
                                         self.average_time.count_again();
+                                        self.stroke_color = self.theme.stroke_success();
                                     } else {
                                         self.user_input = "".to_string();
-                                        if self.max_combo < self.combo {
-                                            self.max_combo = self.combo;
+                                        if self.game_mode == GameMode::Arcade {
+                                            if self.max_combo < self.combo {
+                                                self.max_combo = self.combo;
+                                            }
+                                            self.combo = 0;
+                                            self.try_count += 1;
+                                        } else {
+                                            self.neverno_in_row += 1;
                                         }
-                                        self.combo = 0;
-                                        self.try_count += 1;
                                         self.sl.play(&self.ouch_sound);
+                                        self.stroke_color = self.theme.stroke_failure();
                                         self.average_time = AverageTime::new();
                                     }
                                     if self.combo == 20 {
@@ -220,69 +282,81 @@ impl eframe::App for MultiplicationTraining {
                 );
 
                 //Stats
-                ui.group(|ui| {
-                    ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
-                        ui.horizontal(|ui| {
-                            let max_combo =
-                                Label::new(format!("Максимальный счёт: {}", self.max_combo));
-                            ui.add_sized([165f32, 14f32], max_combo);
+                if self.game_mode == GameMode::Arcade {
+                    ui.group(|ui| {
+                        ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
+                            ui.horizontal(|ui| {
+                                let max_combo =
+                                    Label::new(format!("Максимальный счёт: {}", self.max_combo));
+                                ui.add_sized([165f32, 14f32], max_combo);
 
-                            ui.add_space(ui.available_width() / 3f32 - 95f32);
+                                ui.add_space(ui.available_width() / 3f32 - 95f32);
 
-                            let sr_vremya = Label::new(format!(
-                                "Ср. время: {}",
-                                self.average_time.get_overall_time()
-                            ));
-                            ui.add_sized([95f32, 14f32], sr_vremya);
+                                let sr_vremya = Label::new(format!(
+                                    "Ср. время: {}",
+                                    self.average_time.get_overall_time()
+                                ));
+                                ui.add_sized([95f32, 14f32], sr_vremya);
 
-                            ui.add_space(ui.available_width() / 2f32 - 85f32);
+                                ui.add_space(ui.available_width() / 2f32 - 85f32);
 
-                            let schyot = Label::new(format!("Счёт: {}", self.combo));
-                            ui.add_sized([60f32, 14f32], schyot);
+                                let schyot = Label::new(format!("Счёт: {}", self.combo));
+                                ui.add_sized([60f32, 14f32], schyot);
 
-                            ui.add_space(ui.available_width() - 110f32);
+                                ui.add_space(ui.available_width() - 110f32);
 
-                            let popitka = Label::new(format!("Попытка № {}", self.try_count));
-                            ui.add_sized([110f32, 14f32], popitka);
+                                let popitka = Label::new(format!("Попытка #{}", self.try_count));
+                                ui.add_sized([110f32, 14f32], popitka);
+                            });
                         });
                     });
-                });
+                }
             })
             .response
             .context_menu(|ui| {
-                ui.menu_button("Тема", |ui| {
-                    if ui.button("Тёмная").clicked() {
-                        self.theme = CustomTheme::Dark
-                    }
-                    if ui.button("Светлая").clicked() {
-                        self.theme = CustomTheme::Light
-                    }
-                    if ui.button("Красная").clicked() {
-                        self.theme = CustomTheme::Red
-                    }
-                    if ui.button("Зелёная").clicked() {
-                        self.theme = CustomTheme::Green
-                    }
-                    if ui.button("Голубая").clicked() {
-                        self.theme = CustomTheme::Blue
-                    }
-                    if ui.button("Прозрачная").clicked() {
-                        self.theme = CustomTheme::Transparent
-                    }
-                    if ui.button("WindowsXP").clicked() {
-                        self.theme = CustomTheme::WindowsXP
-                    }
+                ui.menu_button("Режим", |ui| {
+                    if ui
+                        .selectable_value(&mut self.game_mode, GameMode::Arcade, "Аркадный")
+                        .changed()
+                    {
+                        self.average_time = AverageTime::new();
+                    };
+                    ui.selectable_value(&mut self.game_mode, GameMode::Training, "Тренировочный");
                 });
+
+                ui.menu_button("Тема", |ui| {
+                    ui.selectable_value(&mut self.theme, CustomTheme::Dark, "Тёмная");
+                    ui.selectable_value(&mut self.theme, CustomTheme::Light, "Светлая");
+                    ui.selectable_value(&mut self.theme, CustomTheme::Red, "Красная");
+                    ui.selectable_value(&mut self.theme, CustomTheme::Green, "Зелёная");
+                    ui.selectable_value(&mut self.theme, CustomTheme::Blue, "Голубая");
+                    ui.selectable_value(&mut self.theme, CustomTheme::Transparent, "Прозрачная");
+                    ui.selectable_value(&mut self.theme, CustomTheme::WindowsXP, "WindowsXP");
+                });
+
                 ui.menu_button("Громкость", |ui| {
                     ui.add(egui::Slider::new(&mut self.volume, 0.0..=100.0));
                     self.sl.set_global_volume(self.volume / 100f32);
                 });
+
                 ui.menu_button("О проекте", |ui| {
-                    ui.horizontal(|ui| {
-                        ui.weak("Made by");
-                        ui.hyperlink_to("EvgenHi", "https://github.com/EvgenHi");
+                    ui.vertical(|ui| {
+                        ui.label(r"\/\/\ v0.4.0 /\/\/");
+                        ui.horizontal(|ui| {
+                            ui.add_space(11f32);
+                            ui.weak("Made by");
+                            ui.hyperlink_to("EvgenHi", "https://github.com/EvgenHi");
+                        });
+                        ui.label(r"\/\/\/\/\/\/\/\/\/");
                     });
                 });
             });
+        ctx.request_repaint();
     }
+}
+
+#[derive(PartialEq)]
+enum GameMode {
+    Training,
+    Arcade,
 }

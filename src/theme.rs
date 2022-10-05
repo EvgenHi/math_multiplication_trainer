@@ -1,13 +1,14 @@
 use eframe::epaint::Color32;
 
+#[derive(PartialEq)]
 pub enum CustomTheme {
     Dark,
     Light,
-    Blue,
     Red,
+    Blue,
     Green,
-    WindowsXP,
     Transparent,
+    WindowsXP,
 }
 
 impl CustomTheme {
@@ -32,6 +33,25 @@ impl CustomTheme {
             CustomTheme::Green => Color32::from_rgba_premultiplied(100, 100, 100, 255),
             CustomTheme::Transparent => Color32::from_rgba_premultiplied(180, 180, 180, 255),
             CustomTheme::WindowsXP => Color32::from_rgba_premultiplied(129, 192, 70, 235),
+        }
+    }
+
+    // "stroke" is these line around user_input text box
+    pub fn stroke_standart(&self) -> Color32 {
+        match self {
+            _ => Color32::from_rgba_premultiplied(193, 223, 255, 255),
+        }
+    }
+
+    pub fn stroke_success(&self) -> Color32 {
+        match self {
+            _ => Color32::from_rgba_premultiplied(46, 204, 113, 255),
+        }
+    }
+
+    pub fn stroke_failure(&self) -> Color32 {
+        match self {
+            _ => Color32::from_rgba_premultiplied(217, 30, 24, 255),
         }
     }
 }

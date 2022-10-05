@@ -25,6 +25,15 @@ impl AverageTime {
             time: Instant::now(),
         }
     }
+    pub fn return_to_standart_stroke(&self) -> bool {
+        if self.time.elapsed().as_secs_f32()
+            >= std::time::Duration::from_secs_f32(0.24f32).as_secs_f32()
+        {
+            true
+        } else {
+            false
+        }
+    }
 }
 
 trait Trunc {
