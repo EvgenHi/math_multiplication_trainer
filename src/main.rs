@@ -6,8 +6,8 @@ use average_time::AverageTime;
 use theme::CustomTheme;
 
 use eframe::{
-    egui::{self, style::Margin, FontData, FontDefinitions, Key, Label},
-    epaint::{vec2, Color32, FontId},
+    egui::{self, style::Margin, FontData, FontDefinitions, Key, Label, RichText},
+    epaint::{vec2, Color32, FontId, Stroke},
     IconData,
 };
 use egui::epaint::FontFamily;
@@ -53,7 +53,7 @@ struct MultiplicationTraining {
     theme: CustomTheme,
     game_mode: GameMode,
     neverno_in_row: u64,
-    stroke_color: Color32,
+    user_input_stroke_color: Color32,
 }
 
 impl Default for MultiplicationTraining {
@@ -86,7 +86,7 @@ impl Default for MultiplicationTraining {
             theme: CustomTheme::Dark,
             game_mode: GameMode::Arcade,
             neverno_in_row: 0,
-            stroke_color: CustomTheme::Dark.stroke_standart(),
+            user_input_stroke_color: CustomTheme::Dark.stroke_standart_color(),
         }
     }
 }
@@ -144,6 +144,7 @@ impl MultiplicationTraining {
 
 impl eframe::App for MultiplicationTraining {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+
         ctx.set_pixels_per_point(1.5f32);
 
         let central_panel_frame = egui::containers::Frame {
@@ -156,6 +157,7 @@ impl eframe::App for MultiplicationTraining {
                 se: 10.0,
             },
             fill: self.theme.bg_color(),
+            stroke: Stroke::new(1f32, self.theme.window_stroke_color()),
             ..Default::default()
         };
 
@@ -164,16 +166,19 @@ impl eframe::App for MultiplicationTraining {
             .show(ctx, |ui| {
                 ui.style_mut().visuals.override_text_color = Some(self.theme.text_color());
 
+                ui.style_mut().visuals.extreme_bg_color = self.theme.user_input_bg_color();
+
                 // sets stroke color
                 if self.average_time.return_to_standart_stroke() {
-                    self.stroke_color = self.theme.stroke_standart();
+                    self.user_input_stroke_color = self.theme.stroke_standart_color();
                 }
-                ui.visuals_mut().selection.stroke.color = self.stroke_color;
+                ui.visuals_mut().selection.stroke.color = self.user_input_stroke_color;
                 ui.visuals_mut().selection.stroke.width = 1.13f32;
 
                 //Top heading
                 ui.vertical_centered_justified(|ui| {
-                    ui.heading("Тренировка таблицы умножения");
+                    ui.heading(RichText::new("Тренировка таблицы умножения").color(self.theme.heading_color()));
+                    ui.visuals_mut().widgets.noninteractive.bg_stroke = Stroke::new(self.theme.top_separator_width(), self.theme.top_separator_color()) ;
                     ui.separator();
                 });
 
@@ -195,9 +200,9 @@ impl eframe::App for MultiplicationTraining {
                             family: FontFamily::Proportional,
                         });
                         ui.add_space(ui.available_width() / 2f32 - 45f32); //27
-                        ui.strong(self.first_num.to_string());
+                        ui.colored_label( self.theme.eye_catching_text_color(), self.first_num.to_string());
                         ui.label("*");
-                        ui.strong(self.second_num.to_string());
+                        ui.colored_label( self.theme.eye_catching_text_color(),self.second_num.to_string());
                         ui.label("=");
                         let mut layouter = |ui: &egui::Ui, string: &str, _wrap_width: f32| {
                             let mut layout_job: egui::text::LayoutJob =
@@ -241,7 +246,7 @@ impl eframe::App for MultiplicationTraining {
                                         self.second_num = rand::thread_rng().gen_range(2..=9);
                                         self.sl.play(&self.score_sound);
                                         self.average_time.count_again();
-                                        self.stroke_color = self.theme.stroke_success();
+                                        self.user_input_stroke_color = self.theme.stroke_success_color();
                                     } else {
                                         self.user_input = "".to_string();
                                         if self.game_mode == GameMode::Arcade {
@@ -254,7 +259,7 @@ impl eframe::App for MultiplicationTraining {
                                             self.neverno_in_row += 1;
                                         }
                                         self.sl.play(&self.ouch_sound);
-                                        self.stroke_color = self.theme.stroke_failure();
+                                        self.user_input_stroke_color = self.theme.stroke_failure_color();
                                         self.average_time = AverageTime::new();
                                     }
                                     if self.combo == 20 {
@@ -314,6 +319,7 @@ impl eframe::App for MultiplicationTraining {
             })
             .response
             .context_menu(|ui| {
+
                 ui.menu_button("Режим", |ui| {
                     if ui
                         .selectable_value(&mut self.game_mode, GameMode::Arcade, "Аркадный")
@@ -325,12 +331,29 @@ impl eframe::App for MultiplicationTraining {
                 });
 
                 ui.menu_button("Тема", |ui| {
+                    
+                    ui.visuals_mut().selection.bg_fill = self.theme.theme_button_bg_color();
+                    ui.visuals_mut().selection.stroke.color = self.theme.theme_button_text_active_color();          
+
+                    ui.visuals_mut().widgets.inactive.fg_stroke = Stroke::new(30f32, CustomTheme::Dark.theme_button_text_inactive_color());
                     ui.selectable_value(&mut self.theme, CustomTheme::Dark, "Тёмная");
+                    
+                    ui.visuals_mut().widgets.inactive.fg_stroke = Stroke::new(30f32, CustomTheme::Light.theme_button_text_inactive_color());
                     ui.selectable_value(&mut self.theme, CustomTheme::Light, "Светлая");
+                    
+                    ui.visuals_mut().widgets.inactive.fg_stroke = Stroke::new(30f32, CustomTheme::Red.theme_button_text_inactive_color());
                     ui.selectable_value(&mut self.theme, CustomTheme::Red, "Красная");
+                    
+                    ui.visuals_mut().widgets.inactive.fg_stroke = Stroke::new(30f32, CustomTheme::Green.theme_button_text_inactive_color());
                     ui.selectable_value(&mut self.theme, CustomTheme::Green, "Зелёная");
+                    
+                    ui.visuals_mut().widgets.inactive.fg_stroke = Stroke::new(30f32, CustomTheme::Blue.theme_button_text_inactive_color());
                     ui.selectable_value(&mut self.theme, CustomTheme::Blue, "Голубая");
+                    
+                    ui.visuals_mut().widgets.inactive.fg_stroke = Stroke::new(30f32, CustomTheme::Transparent.theme_button_text_inactive_color());
                     ui.selectable_value(&mut self.theme, CustomTheme::Transparent, "Прозрачная");
+
+                    ui.visuals_mut().widgets.inactive.fg_stroke = Stroke::new(30f32, CustomTheme::WindowsXP.theme_button_text_inactive_color());
                     ui.selectable_value(&mut self.theme, CustomTheme::WindowsXP, "WindowsXP");
                 });
 
