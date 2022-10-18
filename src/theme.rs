@@ -15,7 +15,7 @@ impl CustomTheme {
     pub fn bg_color(&self) -> Color32 {
         match self {
             CustomTheme::Dark => Color32::from_rgba_premultiplied(27, 27, 27, 255),
-            CustomTheme::Light => Color32::from_rgba_premultiplied(248, 248, 248, 255),
+            CustomTheme::Light => Color32::from_rgba_premultiplied(200, 200, 200, 255),
             CustomTheme::Blue => Color32::from_rgba_premultiplied(100, 216, 211, 235),
             CustomTheme::Red => Color32::from_rgba_premultiplied(189, 46, 54, 235),
             CustomTheme::Green => Color32::from_rgba_premultiplied(106, 232, 110, 235),
