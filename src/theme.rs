@@ -15,7 +15,7 @@ impl CustomTheme {
     pub fn bg_color(&self) -> Color32 {
         match self {
             CustomTheme::Dark => Color32::from_rgba_premultiplied(27, 27, 27, 255),
-            CustomTheme::Light => Color32::from_rgba_premultiplied(248, 248, 248, 255),
+            CustomTheme::Light => Color32::from_rgba_premultiplied(200, 200, 200, 255),
             CustomTheme::Blue => Color32::from_rgba_premultiplied(100, 216, 211, 235),
             CustomTheme::Red => Color32::from_rgba_premultiplied(189, 46, 54, 235),
             CustomTheme::Green => Color32::from_rgba_premultiplied(106, 232, 110, 235),
@@ -29,7 +29,7 @@ impl CustomTheme {
             CustomTheme::Dark => Color32::from_rgba_premultiplied(150, 150, 150, 255),
             CustomTheme::Light => Color32::from_rgba_premultiplied(0, 0, 0, 255),
             CustomTheme::Blue => Color32::from_rgba_premultiplied(0, 0, 0, 255),
-            CustomTheme::Red => Color32::from_rgba_premultiplied(0, 0, 0, 255),
+            CustomTheme::Red => Color32::from_rgba_premultiplied(25, 25, 25, 255),
             CustomTheme::Green => Color32::from_rgba_premultiplied(0, 0, 0, 255),
             CustomTheme::Transparent => Color32::from_rgba_premultiplied(215, 215, 215, 255),
             CustomTheme::WindowsXP => Color32::from_rgba_premultiplied(0, 0, 0, 255),
@@ -39,6 +39,10 @@ impl CustomTheme {
     // "stroke" is these line around user_input text box
     pub fn stroke_standart_color(&self) -> Color32 {
         match self {
+            CustomTheme::Light => Color32::from_rgba_premultiplied(23, 23, 23, 255),
+            CustomTheme::Blue => Color32::from_rgba_premultiplied(0, 0, 0, 255),
+            CustomTheme::Red => Color32::from_rgba_premultiplied(25, 25, 25, 255),
+            CustomTheme::Green => Color32::from_rgba_premultiplied(0, 0, 0, 255),
             CustomTheme::WindowsXP => Color32::from_rgba_premultiplied(61, 149, 255, 255),
             _ => Color32::from_rgba_premultiplied(193, 223, 255, 255),
         }
@@ -58,6 +62,11 @@ impl CustomTheme {
 
     pub fn user_input_bg_color(&self) -> Color32 {
         match self {
+            CustomTheme::Light => Color32::from_rgba_premultiplied(215, 215, 215, 255),
+            CustomTheme::Blue => Color32::from_rgba_premultiplied(110, 226, 221, 235),
+            CustomTheme::Red => Color32::from_rgba_premultiplied(189, 46, 54, 235),
+            CustomTheme::Green => Color32::from_rgba_premultiplied(106, 232, 110, 235),
+            CustomTheme::WindowsXP => Color32::from_rgba_premultiplied(240, 240, 240, 255),
             _ => Color32::from_rgba_premultiplied(0, 0, 0, 255),
         }
     }
@@ -65,13 +74,23 @@ impl CustomTheme {
     pub fn eye_catching_text_color(&self) -> Color32 {
         match self {
             CustomTheme::Light => Color32::from_rgba_premultiplied(0, 0, 0, 255),
+            CustomTheme::Blue => Color32::from_rgba_premultiplied(0, 0, 0, 255),
+            CustomTheme::Red => Color32::from_rgba_premultiplied(25, 25, 25, 255),
+            CustomTheme::Green => Color32::from_rgba_premultiplied(0, 0, 0, 255),
+            CustomTheme::WindowsXP => Color32::from_rgba_premultiplied(0, 0, 0, 255),
             _ => Color32::from_rgba_premultiplied(255, 255, 255, 255),
         }
     }
 
     pub fn heading_color(&self) -> Color32 {
         match self {
-            _ => Color32::from_rgba_premultiplied(160, 160, 160, 255),
+            CustomTheme::Dark => Color32::from_rgba_premultiplied(160, 160, 160, 255),
+            CustomTheme::Light => Color32::from_rgba_premultiplied(0, 0, 0, 255),
+            CustomTheme::Blue => Color32::from_rgba_premultiplied(0, 0, 0, 255),
+            CustomTheme::Red => Color32::from_rgba_premultiplied(25, 25, 25, 255),
+            CustomTheme::Green => Color32::from_rgba_premultiplied(0, 0, 0, 255),
+            CustomTheme::Transparent => Color32::from_rgba_premultiplied(160, 160, 160, 255),
+            CustomTheme::WindowsXP => Color32::from_rgba_premultiplied(0, 0, 0, 255),
         }
     }
 
@@ -83,6 +102,9 @@ impl CustomTheme {
 
     pub fn top_separator_color(&self) -> Color32 {
         match self {
+            CustomTheme::Blue => Color32::from_rgba_premultiplied(0, 0, 0, 255),
+            CustomTheme::Red => Color32::from_rgba_premultiplied(25, 25, 25, 255),
+            CustomTheme::Green => Color32::from_rgba_premultiplied(0, 0, 0, 255),
             _ => Color32::from_rgba_premultiplied(160, 160, 160, 255),
         }
     }
@@ -129,6 +151,6 @@ impl CustomTheme {
             CustomTheme::WindowsXP => Color32::from_rgba_premultiplied(59, 119, 188, 235),
         }
     }
-  
-    
+
+
 }
